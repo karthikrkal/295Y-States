@@ -37,15 +37,16 @@ void nextState(){
 }
 
 void lbControl(){
-	double kp = 0.1;
+	double kp = 0.3;
 	double error = target - ladyBrownRotation.get_position();
 	double velocity = kp * error;
-	ladyBrown.move(velocity); 
+	ladyBrown.move(velocity);
 }
-bool sortingBlue = true;
-bool sortingRed = false;
+
+bool sortingBlue = false;
+bool sortingRed = true;
 void colorSort() {
-	left_sorter.set_led_pwm(75);
+	left_sorter.set_led_pwm(100);
         while (true) {
             if(sortingBlue == true){
 				printf("%s", "Color Sorting Blue");
@@ -58,7 +59,7 @@ void colorSort() {
             }
             else if(sortingRed == true){
                 printf("%s", "Color Sorting Red");
-                if(intake.get_power() >= 1 && ((left_sorter.get_hue() <= 10) || (left_sorter.get_hue() >= 340 && left_sorter.get_hue() < 360))){
+                if(intake.get_power() >= 1 && ((left_sorter.get_hue() <= 25) || (left_sorter.get_hue() >= 340 && left_sorter.get_hue() < 360))){
                     pros::Task::delay(42);
                     intake.move_velocity(0);
                     pros::Task::delay(150);
