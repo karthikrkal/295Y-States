@@ -22,6 +22,8 @@ pros::Imu imu(9);
 
 bool doinker1 = false;
 
+const int selectedAuton = 1;
+
 const int numStates = 3;
 int states[numStates] = {1400, 6300, 20000};
 int currentState = 0;
@@ -45,7 +47,7 @@ bool sortingRed = false;
 void colorSort() {
 	left_sorter.set_led_pwm(75);
         while (true) {
-            if(sortingBlue == false){
+            if(sortingBlue == true){
 				printf("%s", "Color Sorting Blue");
                 if(intake.get_power() >=1 && (left_sorter.get_hue() > 180)){
                     pros::Task::delay(42);
@@ -56,7 +58,7 @@ void colorSort() {
             }
             else if(sortingRed == true){
                 printf("%s", "Color Sorting Red");
-                if(intake.get_power() >= 1 && (left_sorter.get_hue() < 18)){
+                if(intake.get_power() >= 1 && ((left_sorter.get_hue() <= 10) || (left_sorter.get_hue() >= 340 && left_sorter.get_hue() < 360))){
                     pros::Task::delay(42);
                     intake.move_velocity(0);
                     pros::Task::delay(150);
@@ -199,8 +201,7 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
 void autonomous() {
-
-   intake.move_velocity(-12000);
+    intake.move_velocity(-12000);
 }
 
 /**
