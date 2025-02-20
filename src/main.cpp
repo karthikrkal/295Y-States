@@ -36,12 +36,16 @@ void nextState(){
 	target = states[currentState];
 }
 
-void lbControl(){
-	double kp = 0.3;
-	double error = target - ladyBrownRotation.get_position();
-	double velocity = kp * error;
-	ladyBrown.move(velocity);
+double previousError = 0;
+
+double lbControl(double error) {
+	double kp = 1;
+	double kd = 0.0;
+	double output = kp * error + kd * (error - previousError);
+	previousError = error;
+	return output;
 }
+
 
 bool sortingBlue = false;
 bool sortingRed = true;
@@ -151,12 +155,16 @@ void initialize() {
     chassis.calibrate(); // calibrate sensors
 
 	pros::Task lbControlTask([]{
-		while (true){
-			lbControl();
+		double error;
+		double output;
+
+		while (true) {
+			error = target - ladyBrownRotation.get_position();
+			output = lbControl(error);
+			ladyBrown.move(output);
 			pros::delay(20);
 		}
 	});
-
     pros::Task colorSortTask(colorSort);
 
     // the default rate is 50. however, if you need to change the rate, you
