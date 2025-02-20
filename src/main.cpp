@@ -47,17 +47,17 @@ double lbControl(double error) {
 }
 
 
-bool sortingBlue = false;
-bool sortingRed = true;
+bool sortingBlue = true;
+bool sortingRed = false;
 void colorSort() {
 	left_sorter.set_led_pwm(100);
         while (true) {
             if(sortingBlue == true){
 				printf("%s", "Color Sorting Blue");
                 if(intake.get_power() >=1 && (left_sorter.get_hue() > 180)){
-                    pros::Task::delay(42);
+                    pros::Task::delay(48);
                     intake.move_velocity(0);
-                    pros::Task::delay(150);
+                    pros::Task::delay(200);
                     intake.move_velocity(-12000);
                 }
             }
@@ -98,9 +98,9 @@ lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
 );
 
 // lateral motion controller
-lemlib::ControllerSettings linearController(10, // proportional gain (kP)
+lemlib::ControllerSettings linearController(8, // proportional gain (kP)
                                             0, // integral gain (kI)
-                                            3, // derivative gain (kD)
+                                            14, // derivative gain (kD)
                                             3, // anti windup
                                             1, // small error range, in inches
                                             100, // small error range timeout, in milliseconds
@@ -110,21 +110,21 @@ lemlib::ControllerSettings linearController(10, // proportional gain (kP)
 );
 
 // angular motion controller
-lemlib::ControllerSettings angularController(2, // proportional gain (kP)
+lemlib::ControllerSettings angularController(18, // proportional gain (kP)
                                              0, // integral gain (kI)
-                                             10, // derivative gain (kD)
+                                             0, // derivative gain (kD)
                                              3, // anti windup
                                              1, // small error range, in degrees
                                              100, // small error range timeout, in milliseconds
                                              3, // large error range, in degrees
                                              500, // large error range timeout, in milliseconds
-                                             0 // maximum acceleration (slew)
+                                             20 // maximum acceleration (slew)
 );
 
 // sensors for odometry
 lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel
                             nullptr, // vertical tracking wheel 2, set to nullptr as we don't have a second one
-                            &horizontal, // horizontal tracking wheel
+                            nullptr, // horizontal tracking wheel
                             nullptr, // horizontal tracking wheel 2, set to nullptr as we don't have a second one
                             &imu // inertial sensor
 );
@@ -166,6 +166,8 @@ void initialize() {
 		}
 	});
     pros::Task colorSortTask(colorSort);
+    leftMotors.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+    rightMotors.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
 
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
@@ -210,7 +212,15 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
 void autonomous() {
-    intake.move_velocity(-12000);
+    using namespace pros;
+    chassis.setPose(0, 0, 0, false);
+    // intake.move_voltage(-12000);
+    // delay(800);
+    // intake.move_voltage(0);
+    // chassis.moveToPoint(0, 14, 1200, {.forwards = true}, false);
+    chassis.turnToHeading(45, 1000, {.direction = AngularDirection::CW_CLOCKWISE, .minSpeed = 100});
+    // chassis.turnToPoint(10, 0, 1000, {.direction = lemlib::AngularDirection::CW_CLOCKWISE, .minSpeed = 100});
+    
 }
 
 /**
