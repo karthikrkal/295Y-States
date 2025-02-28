@@ -1,5 +1,22 @@
 #include "main.h"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+using namespace pros;
+using namespace lemlib;
+
+/*Auton Directory*/
+//1. Red Solo AWP
+//2. Blue Solo AWP
+//3. Red 6 Ring (Ladder for 1/2?)
+//4. Blue 6 Ring (Ladder for 1/2?)
+//5. Red Goal Side (1/2 AWP)
+//6. Blue Goal Side (1/2 AWP)
+//7. Goal Rush Red
+//8. Goal Rush Blue
+//9. Skills
+//10. Elims 1
+//11. Elims 2
+const int selectedAuton = 1;
+bool onRedAlliance = true;
 
 // controller
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
@@ -13,6 +30,8 @@ pros::Motor ladyBrown(-20, pros::MotorGearset::red);
 pros::Rotation ladyBrownRotation(2);
 pros::Optical left_sorter(7);
 pros::Optical intakeColor2(9);
+pros::Rotation horizontalEnc(16);
+pros::Rotation verticalEnc(15);
 //Pneumatics
 pros::ADIDigitalOut clamp('B');
 pros::ADIDigitalOut doinker('A');
@@ -22,7 +41,6 @@ pros::Imu imu(9);
 
 bool doinker1 = false;
 
-const int selectedAuton = 1;
 
 const int numStates = 3;
 int states[numStates] = {1400, 6300, 20000};
@@ -47,12 +65,10 @@ double lbControl(double error) {
 }
 
 
-bool sortingBlue = true;
-bool sortingRed = false;
 void colorSort() {
 	left_sorter.set_led_pwm(100);
         while (true) {
-            if(sortingBlue == true){
+            if(onRedAlliance == true){
 				printf("%s", "Color Sorting Blue");
                 if(intake.get_power() >=1 && (left_sorter.get_hue() > 180)){
                     pros::Task::delay(48);
@@ -61,7 +77,7 @@ void colorSort() {
                     intake.move_velocity(-12000);
                 }
             }
-            else if(sortingRed == true){
+            else if(onRedAlliance == false){
                 printf("%s", "Color Sorting Red");
                 if(intake.get_power() >= 1 && ((left_sorter.get_hue() <= 25) || (left_sorter.get_hue() >= 340 && left_sorter.get_hue() < 360))){
                     pros::Task::delay(42);
@@ -80,11 +96,12 @@ void colorSort() {
 
 // tracking wheels
 // horizontal tracking wheel encoder. Rotation sensor, port 20, not reversed
-pros::Rotation horizontalEnc(16);
+
 // vertical tracking wheel encoder. Rotation sensor, port 11, reversed
 // pros::Rotation verticalEnc(-11);
 // horizontal tracking wheel. 2.75" diameter, 5.75" offset, back of the robot (negative)
-lemlib::TrackingWheel horizontal(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.75);
+lemlib::TrackingWheel horizontalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.75);
+lemlib::TrackingWheel verticalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.75);
 // vertical tracking wheel. 2.75" diameter, 2.5" offset, left of the robot (negative)
 // lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_275, -2.5);
 
@@ -92,9 +109,9 @@ lemlib::TrackingWheel horizontal(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.
 lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
                               &rightMotors, // right motor group
                               10, // 10 inch track width
-                              lemlib::Omniwheel::NEW_4, // using new 4" omnis
-                              360, // drivetrain rpm is 360
-                              2 // horizontal drift is 2. If we had traction wheels, it would have been 8
+                              lemlib::Omniwheel::NEW_275, // using new 4" omnis
+                              480, // drivetrain rpm is 360
+                              8 // horizontal drift is 2. If we had traction wheels, it would have been 8
 );
 
 // lateral motion controller
@@ -110,9 +127,9 @@ lemlib::ControllerSettings linearController(8, // proportional gain (kP)
 );
 
 // angular motion controller
-lemlib::ControllerSettings angularController(18, // proportional gain (kP)
+lemlib::ControllerSettings angularController(1.05, // proportional gain (kP)
                                              0, // integral gain (kI)
-                                             0, // derivative gain (kD)
+                                             2.2, // derivative gain (kD)
                                              3, // anti windup
                                              1, // small error range, in degrees
                                              100, // small error range timeout, in milliseconds
@@ -122,9 +139,9 @@ lemlib::ControllerSettings angularController(18, // proportional gain (kP)
 );
 
 // sensors for odometry
-lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel
+lemlib::OdomSensors sensors(&verticalPod, // vertical tracking wheel
                             nullptr, // vertical tracking wheel 2, set to nullptr as we don't have a second one
-                            nullptr, // horizontal tracking wheel
+                            &horizontalPod, // horizontal tracking wheel
                             nullptr, // horizontal tracking wheel 2, set to nullptr as we don't have a second one
                             &imu // inertial sensor
 );
@@ -212,15 +229,40 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
 void autonomous() {
-    using namespace pros;
-    chassis.setPose(0, 0, 0, false);
-    // intake.move_voltage(-12000);
-    // delay(800);
-    // intake.move_voltage(0);
-    // chassis.moveToPoint(0, 14, 1200, {.forwards = true}, false);
-    chassis.turnToHeading(45, 1000, {.direction = AngularDirection::CW_CLOCKWISE, .minSpeed = 100});
-    // chassis.turnToPoint(10, 0, 1000, {.direction = lemlib::AngularDirection::CW_CLOCKWISE, .minSpeed = 100});
-    
+    switch (selectedAuton){
+        case 1: //Red Solo AWP 
+        chassis.turnToHeading(90, 1000, {.direction = AngularDirection::CCW_COUNTERCLOCKWISE}, false);
+        break;
+        case 2: //Blue Solo AWP
+        chassis.moveToPose(0, 0, 90, 1000, {.forwards = false}, false);
+        break;
+        case 3: //Red 6 Ring (Ladder for 1/2?)
+        chassis.moveToPoint(0, 0, 1000, {.forwards = true}, false);
+        break;
+        case 4: //Blue 6 Ring (Ladder for 1/2?)
+        chassis.turnToPoint(0, 0, 1000, {.direction = AngularDirection::CW_CLOCKWISE}, false);
+        break;
+        case 5: //Red Goal Side (1/2 AWP)
+        intake.move_voltage(12000);
+        break;
+        case 6: //Blue Goal Side (1/2 AWP)
+        ladyBrown.move_voltage(12000);
+        break;
+        case 7: //Goal Rush Red
+        clamp.set_value(1);
+        break;
+        case 8: //Goal Rush Blue
+        break;
+        case 9: //Skills
+        chassis.swingToHeading(90, DriveSide::LEFT, 1000, {.maxSpeed = 127}, true);
+        break;
+        case 10: //Elims 1
+        chassis.swingToPoint(-25, 25, DriveSide::RIGHT, 1000, {.maxSpeed = 127}, true);
+        break;
+        case 11: //Elims 2
+        chassis.setPose(0, 0, 0, false);
+        break;
+    }
 }
 
 /**
