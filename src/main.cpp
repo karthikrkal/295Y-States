@@ -29,18 +29,19 @@ pros::Motor ladyBrown(-20, pros::MotorGearset::red);
 //Sensors
 pros::Rotation ladyBrownRotation(2);
 pros::Optical left_sorter(7);
-pros::Optical intakeColor2(9);
+pros::Optical right_sorter(2);
 pros::Rotation horizontalEnc(16);
-pros::Rotation verticalEnc(15);
+pros::Rotation verticalEnc(3);
 //Pneumatics
 pros::ADIDigitalOut clamp('B');
-pros::ADIDigitalOut doinker('A');
+pros::ADIDigitalOut doinkerRight('A'); //OG Doinker
+pros::ADIDigitalOut doinkerLeft('C');
 
 // Inertial Sensor on port 10
 pros::Imu imu(9);
 
 bool doinker1 = false;
-
+bool doinker2 = false;
 
 const int numStates = 3;
 int states[numStates] = {1400, 6300, 20000};
@@ -64,14 +65,16 @@ double lbControl(double error) {
 	return output;
 }
 
+float colorofRing = (left_sorter.get_hue() + right_sorter.get_hue()) / 2;
 
 void colorSort() {
 	left_sorter.set_led_pwm(100);
+    right_sorter.set_led_pwm(100);
         while (true) {
             if(onRedAlliance == true){
 				printf("%s", "Color Sorting Blue");
-                if(intake.get_power() >=1 && (left_sorter.get_hue() > 180)){
-                    pros::Task::delay(48);
+                if(intake.get_power() >=1 && (left_sorter.get_hue() > 180 || right_sorter.get_hue() > 180)){
+                    pros::Task::delay(50);
                     intake.move_velocity(0);
                     pros::Task::delay(200);
                     intake.move_velocity(-12000);
@@ -79,21 +82,22 @@ void colorSort() {
             }
             else if(onRedAlliance == false){
                 printf("%s", "Color Sorting Red");
-                if(intake.get_power() >= 1 && ((left_sorter.get_hue() <= 25) || (left_sorter.get_hue() >= 340 && left_sorter.get_hue() < 360))){
-                    pros::Task::delay(42);
+                if(intake.get_target_velocity() == 600 && (left_sorter.get_hue() < 30 || right_sorter.get_hue() < 30)){
+                    pros::Task::delay(50);
                     intake.move_velocity(0);
                     pros::Task::delay(150);
                     intake.move_velocity(-12000);
                 }
             }
-            pros::lcd::print(4, "Ring Hue: %f", left_sorter.get_hue());
-			pros::lcd::print(5, "Intake Motor voltage: %f", intake.get_power());
+            pros::lcd::print(4, "Left Hue: %f", left_sorter.get_hue());
+			pros::lcd::print(5, "Right Hue: %f", right_sorter.get_hue());
+			pros::lcd::print(6, "Motor Voltage: %f", intake.get_power());
             pros::Task::delay(10);
         }
 }
 
 void autonSelector(){
-    
+
 }
 
 
@@ -104,8 +108,8 @@ void autonSelector(){
 // vertical tracking wheel encoder. Rotation sensor, port 11, reversed
 // pros::Rotation verticalEnc(-11);
 // horizontal tracking wheel. 2.75" diameter, 5.75" offset, back of the robot (negative)
-lemlib::TrackingWheel horizontalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.75);
-lemlib::TrackingWheel verticalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, -5.75);
+lemlib::TrackingWheel horizontalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, 0);
+lemlib::TrackingWheel verticalPod(&horizontalEnc, lemlib::Omniwheel::NEW_275, 0);
 // vertical tracking wheel. 2.75" diameter, 2.5" offset, left of the robot (negative)
 // lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_275, -2.5);
 
@@ -175,21 +179,8 @@ void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
 
-	pros::Task lbControlTask([]{
-		double error;
-		double output;
-
-		while (true) {
-			error = target - ladyBrownRotation.get_position();
-			output = lbControl(error);
-			ladyBrown.move(output);
-			pros::delay(20);
-		}
-	});
+	
     pros::Task colorSortTask(colorSort);
-    leftMotors.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
-    rightMotors.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
-
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
     // lemlib::bufferedStdout().setRate(...);
@@ -235,7 +226,9 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
 void autonomous() {
     switch (selectedAuton){
         case 1: //Red Solo AWP 
-        chassis.turnToHeading(90, 1000, {.direction = AngularDirection::CCW_COUNTERCLOCKWISE}, false);
+        clamp.set_value(1);
+        delay(250);
+        intake.move_velocity(-12000);
         break;
         case 2: //Blue Solo AWP
         chassis.moveToPose(0, 0, 90, 1000, {.forwards = false}, false);
@@ -297,14 +290,17 @@ void opcontrol() {
 		if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)){
 			clamp.set_value(0);
 		}
-		if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)){
+		if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)){
 			doinker1 = !doinker1;
-			doinker.set_value(doinker1);
+			doinkerLeft.set_value(doinker1);
 		}
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)){
+            doinker2 = !doinker2;
+            doinkerRight.set_value(doinker2);
+        }
 		if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
 			nextState();
 		}
-
         // delay to save resources
         pros::delay(20);
     }
